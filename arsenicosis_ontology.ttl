@@ -1,0 +1,281 @@
+@prefix : <http://www.aiub.edu/ontologies/arsenicosis#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix dc: <http://purl.org/dc/elements/1.1/> .
+
+<http://www.aiub.edu/ontologies/arsenicosis> rdf:type owl:Ontology ;
+    rdfs:label "Arsenicosis Clinical Reasoning Ontology"@en ;
+    rdfs:comment """Lightweight ontology grounding CNN + XAI (Grad-CAM/LIME) output
+    into clinically interpretable explanations for arsenicosis screening.
+    Built for: Ontology-Guided Explainable Deep Learning Framework for
+    Arsenicosis Detection (AIUB undergraduate research, 2026).
+
+    v2: fixed a class/individual punning bug in body-location handling
+    (see comments near BodyLocation individuals below).""" ;
+    dc:creator "Afnan Sultan Trino, Sumiya Rahman Hadir"@en ;
+    dc:contributor "Supervisor: Tanvir Ahmed, AIUB"@en .
+
+
+###############################################################
+# ---------------------- CLASSES -------------------------------
+###############################################################
+
+:ArsenicosisManifestation rdf:type owl:Class ;
+    rdfs:label "Arsenicosis Manifestation"@en ;
+    rdfs:comment "Any cutaneous sign resulting from chronic arsenic exposure."@en ;
+    dc:source "WHO working group definition, cited in Sil et al., QJM 2020, https://doi.org/10.1093/qjmed/hcz309" .
+
+### --- Melanosis branch ---
+:Melanosis rdf:type owl:Class ;
+    rdfs:subClassOf :ArsenicosisManifestation ;
+    rdfs:label "Melanosis"@en ;
+    rdfs:comment "Earliest and most common cutaneous sign of arsenicosis."@en ;
+    dc:source "IJDVL, Arsenicosis: Diagnosis and Treatment, https://ijdvl.com/arsenicosis-diagnosis-and-treatment/" .
+
+:DiffuseMelanosis rdf:type owl:Class ; rdfs:subClassOf :Melanosis ;
+    rdfs:label "Diffuse Melanosis"@en .
+
+:LocalizedMelanosis rdf:type owl:Class ; rdfs:subClassOf :Melanosis ;
+    rdfs:label "Localized/Patchy Melanosis"@en .
+
+:RainDropPigmentation rdf:type owl:Class ; rdfs:subClassOf :Melanosis ;
+    rdfs:label "Rain-drop Pigmentation"@en ;
+    rdfs:comment "Fine freckle-like spotted pigmentary changes."@en ;
+    dc:source "J Pak Assoc Dermatol 2014;24(4):286-291" .
+
+:Leucomelanosis rdf:type owl:Class ; rdfs:subClassOf :Melanosis ;
+    rdfs:label "Leucomelanosis"@en ;
+    rdfs:comment "Macular depigmentation appearing on normal or hyperpigmented skin."@en ;
+    dc:source "J Pak Assoc Dermatol 2014;24(4):286-291" .
+
+### --- Keratosis branch ---
+:Keratosis rdf:type owl:Class ;
+    rdfs:subClassOf :ArsenicosisManifestation ;
+    rdfs:label "Keratosis"@en ;
+    rdfs:comment "Thickening of skin (papules/plaques/nodules); soles are the most sensitive early marker." ;
+    dc:source "IJDVL, Arsenicosis: Diagnosis and Treatment" .
+
+:SpottedKeratosis rdf:type owl:Class ; rdfs:subClassOf :Keratosis ;
+    rdfs:label "Spotted Keratosis"@en ;
+    dc:source "Guha Mazumder, Diagnosis of Arsenicosis, PubMed 12635831 -- Stage II Grade 2" .
+
+:DiffuseKeratosis rdf:type owl:Class ; rdfs:subClassOf :Keratosis ;
+    rdfs:label "Diffuse Keratosis"@en ;
+    dc:source "Guha Mazumder, Diagnosis of Arsenicosis, PubMed 12635831 -- Stage II Grade 3" .
+
+:DorsalKeratosis rdf:type owl:Class ; rdfs:subClassOf :Keratosis ;
+    rdfs:label "Dorsal Keratosis"@en ;
+    dc:source "Guha Mazumder, Diagnosis of Arsenicosis, PubMed 12635831 -- Stage II Grade 4" .
+
+### --- Malignant complications (kept as classes -- we may later want
+###     subtypes/grades of each; instances of these are created separately
+###     below, see :BowensCase_Sample04) ---
+:ArsenicosisComplication rdf:type owl:Class ;
+    rdfs:subClassOf :ArsenicosisManifestation ;
+    rdfs:label "Arsenicosis Complication"@en ;
+    rdfs:comment "Malignant/pre-malignant progression from chronic keratosis."@en ;
+    dc:source "PathologyOutlines.com, Arsenical Keratosis" .
+
+:BowensDisease rdf:type owl:Class ; rdfs:subClassOf :ArsenicosisComplication ;
+    rdfs:label "Bowen's Disease"@en .
+:SquamousCellCarcinoma rdf:type owl:Class ; rdfs:subClassOf :ArsenicosisComplication ;
+    rdfs:label "Squamous Cell Carcinoma"@en .
+:BasalCellCarcinoma rdf:type owl:Class ; rdfs:subClassOf :ArsenicosisComplication ;
+    rdfs:label "Basal Cell Carcinoma"@en .
+
+### --- Clinical staging (Guha Mazumder system) ---
+:ClinicalStage rdf:type owl:Class ; rdfs:label "Clinical Stage"@en ;
+    dc:source "Guha Mazumder, Diagnosis of Arsenicosis, PubMed 12635831" .
+:StageI_Subclinical rdf:type owl:Class ; rdfs:subClassOf :ClinicalStage .
+:StageII_Clinical rdf:type owl:Class ; rdfs:subClassOf :ClinicalStage .
+:StageIII_Complications rdf:type owl:Class ; rdfs:subClassOf :ClinicalStage .
+:StageIV_Malignancy rdf:type owl:Class ; rdfs:subClassOf :ClinicalStage .
+
+
+###############################################################
+# ----------- BODY LOCATION: class + INDIVIDUALS (fixed) ---------
+# IMPORTANT FIX: Palm/Sole/Trunk/etc. are enumerable, finite categories
+# -- they belong as INDIVIDUALS of :BodyLocation, not as subclasses.
+# Making them classes and then using the same IRI as a property filler
+# (punning) breaks reasoning: the reasoner cannot infer that the punned
+# individual belongs to the punned class without an explicit rdf:type
+# link, which we never asserted. Using plain individuals + owl:hasValue
+# restrictions avoids the problem entirely.
+###############################################################
+
+:BodyLocation rdf:type owl:Class ; rdfs:label "Body Location"@en .
+
+:Palm rdf:type owl:NamedIndividual , :BodyLocation ; rdfs:label "Palm"@en .
+:Sole rdf:type owl:NamedIndividual , :BodyLocation ; rdfs:label "Sole"@en .
+:Trunk rdf:type owl:NamedIndividual , :BodyLocation ; rdfs:label "Trunk"@en .
+:DorsalSurface rdf:type owl:NamedIndividual , :BodyLocation ; rdfs:label "Dorsal Surface"@en .
+:FlexuralArea rdf:type owl:NamedIndividual , :BodyLocation ; rdfs:label "Flexural Area"@en .
+
+
+###############################################################
+# ------------- DEFINED (EQUIVALENT) CLASSES ---------------------
+###############################################################
+
+:SoleKeratosis rdf:type owl:Class ;
+    owl:equivalentClass [
+        rdf:type owl:Class ;
+        owl:intersectionOf ( :Keratosis
+            [ rdf:type owl:Restriction ;
+              owl:onProperty :occursAtLocation ;
+              owl:hasValue :Sole ]          # <-- hasValue, not someValuesFrom
+        )
+    ] ;
+    rdfs:label "Sole Keratosis (defined)"@en ;
+    rdfs:comment "Keratosis located on the sole -- clinically the most sensitive early marker of arsenicosis."@en ;
+    dc:source "IJDVL, Arsenicosis: Diagnosis and Treatment -- keratosis on soles is the most sensitive marker for early detection" .
+
+:PalmKeratosis rdf:type owl:Class ;
+    owl:equivalentClass [
+        rdf:type owl:Class ;
+        owl:intersectionOf ( :Keratosis
+            [ rdf:type owl:Restriction ;
+              owl:onProperty :occursAtLocation ;
+              owl:hasValue :Palm ]
+        )
+    ] ;
+    rdfs:label "Palm Keratosis (defined)"@en .
+
+:TrunkKeratosis rdf:type owl:Class ;
+    owl:equivalentClass [
+        rdf:type owl:Class ;
+        owl:intersectionOf ( :Keratosis
+            [ rdf:type owl:Restriction ;
+              owl:onProperty :occursAtLocation ;
+              owl:hasValue :Trunk ]
+        )
+    ] ;
+    rdfs:label "Trunk Keratosis (defined)"@en ;
+    rdfs:comment "Localized keratotic thickening on trunk/forearm skin -- matches the CNN+Grad-CAM pipeline's real detected cases (see IMG_1184_Lesion, IMG_1176_Lesion below)."@en .
+
+:HighRiskManifestation rdf:type owl:Class ;
+    owl:equivalentClass [
+        rdf:type owl:Class ;
+        owl:intersectionOf ( :Keratosis
+            [ rdf:type owl:Restriction ;
+              owl:onProperty :hasRiskOfProgressingTo ;
+              owl:someValuesFrom :ArsenicosisComplication ]
+        )
+    ] ;
+    rdfs:label "High-Risk Manifestation (defined)"@en ;
+    rdfs:comment "Any keratosis instance explicitly linked to a malignant complication risk -- flags cases for closer clinical follow-up."@en .
+
+
+###############################################################
+# ---------------------- OBJECT PROPERTIES ----------------------
+###############################################################
+
+:occursAtLocation rdf:type owl:ObjectProperty ;
+    rdfs:domain :ArsenicosisManifestation ;
+    rdfs:range :BodyLocation ;
+    rdfs:label "occurs at location"@en .
+
+:indicatesStage rdf:type owl:ObjectProperty ;
+    rdfs:domain :ArsenicosisManifestation ;
+    rdfs:range :ClinicalStage ;
+    rdfs:label "indicates stage"@en .
+
+:hasRiskOfProgressingTo rdf:type owl:ObjectProperty ;
+    rdfs:domain :Keratosis ;
+    rdfs:range :ArsenicosisComplication ;
+    rdfs:label "has risk of progressing to"@en ;
+    dc:source "PathologyOutlines.com -- keratosis as risk factor for Bowen disease, SCC, BCC" .
+
+:detectedInImage rdf:type owl:ObjectProperty ;
+    rdfs:domain :ArsenicosisManifestation ;
+    rdfs:label "detected in image"@en ;
+    rdfs:comment "Links a manifestation instance to a specific screened image -- populated from CNN + Grad-CAM output, NOT from literature." .
+
+:hasScreeningFinding rdf:type owl:ObjectProperty ;
+    owl:propertyChainAxiom ( :detectedInImage :occursAtLocation ) ;
+    rdfs:label "has screening finding at"@en .
+
+
+###############################################################
+# ---------------- SAMPLE INDIVIDUALS (for HermiT/DL query demo) ---
+###############################################################
+### occursAtLocation now points to the proper BodyLocation INDIVIDUALS
+### defined above (:Palm, :Sole, :Trunk) -- no more punning.
+
+:Lesion_Sample01 rdf:type :SpottedKeratosis ;
+    :occursAtLocation :Palm ;
+    rdfs:label "Sample palm keratosis lesion"@en .
+### Expected after reasoning: classified under :PalmKeratosis
+
+:Lesion_Sample02 rdf:type :DiffuseMelanosis ;
+    :occursAtLocation :Trunk ;
+    rdfs:label "Sample trunk melanosis lesion"@en .
+
+:Lesion_Sample03 rdf:type :SpottedKeratosis ;
+    :occursAtLocation :Sole ;
+    rdfs:label "Sample sole keratosis lesion"@en .
+### Expected after reasoning: classified under :SoleKeratosis
+
+### FIX: hasRiskOfProgressingTo now points to a proper INDIVIDUAL that is
+### explicitly typed as :BowensDisease, instead of pointing at the class
+### IRI :BowensDisease directly. This avoids relying on the rdfs:range
+### shortcut and works correctly even if you later query for a SPECIFIC
+### complication (e.g. "hasRiskOfProgressingTo some BowensDisease") rather
+### than the general ArsenicosisComplication class.
+:BowensCase_Sample04 rdf:type owl:NamedIndividual , :BowensDisease ;
+    rdfs:label "Bowen's disease risk finding (sample)"@en .
+
+:Lesion_Sample04 rdf:type :DiffuseKeratosis ;
+    :occursAtLocation :Sole ;
+    :hasRiskOfProgressingTo :BowensCase_Sample04 ;
+    rdfs:label "Sample high-risk sole keratosis lesion"@en .
+### Expected after reasoning: classified under BOTH :SoleKeratosis AND
+### :HighRiskManifestation.
+
+### Example DL Queries to run in Protégé (paste into DL Query tab, make
+### sure "Instances" and "Equivalent classes" checkboxes are both ticked):
+###   1) Keratosis and (occurs at location value :Sole)
+###      -> Equivalent classes: Sole Keratosis
+###      -> Instances: Lesion_Sample03, Lesion_Sample04
+###   2) HighRiskManifestation
+###      -> Instances: Lesion_Sample04
+###   3) Keratosis and (has risk of progressing to some 'Bowen's Disease')
+###      -> Instances: Lesion_Sample04 (this now works correctly too,
+###         unlike before the fix)
+
+
+###############################################################
+# ---------- REAL PIPELINE INDIVIDUALS (from CNN + Grad-CAM) -----
+###############################################################
+### These come from actually running the trained CNN + Grad-CAM on real
+### dataset images (see 06_pipeline_demo.py), NOT hand-invented examples.
+### The lesion_pattern/body_location for each was assigned by manual visual
+### review of the Grad-CAM output (the "manual bridge" step -- see chat
+### discussion on why this step isn't yet automated).
+
+:IMG_1184_Lesion rdf:type :SpottedKeratosis ;
+    :occursAtLocation :Trunk ;
+    :detectedInImage "IMG_1184.JPG" ;
+    rdfs:label "Lesion detected in IMG_1184"@en ;
+    rdfs:comment "CNN confidence 81.5% arsenic-affected. Highest Grad-CAM faithfulness score in the sample (IoU=0.502) -- heatmap closely matches the visible lesion."@en .
+### Expected after reasoning: classified under :TrunkKeratosis
+
+:IMG_1173_Lesion rdf:type :DiffuseMelanosis ;
+    :occursAtLocation :Trunk ;
+    :detectedInImage "IMG_1173.JPG" ;
+    rdfs:label "Lesion detected in IMG_1173"@en ;
+    rdfs:comment "CNN confidence 99.1% arsenic-affected. Grad-CAM shows two distinct high-activation spots, consistent with a diffuse/multi-spot pigmentation pattern."@en .
+
+:IMG_1176_Lesion rdf:type :SpottedKeratosis ;
+    :occursAtLocation :Trunk ;
+    :detectedInImage "IMG_1176.JPG" ;
+    rdfs:label "Lesion detected in IMG_1176"@en ;
+    rdfs:comment "CNN confidence 97.9% arsenic-affected. Grad-CAM strongly highlights only one of three visible lesions -- a faithfulness limitation worth discussing."@en .
+### Expected after reasoning: classified under :TrunkKeratosis
+
+### Query to demo the real pipeline connection:
+###   TrunkKeratosis
+###   -> Instances: IMG_1184_Lesion, IMG_1176_Lesion
+### This is the concrete proof that ontology reasoning now runs on actual
+### CNN+Grad-CAM output, not just hand-built samples.
